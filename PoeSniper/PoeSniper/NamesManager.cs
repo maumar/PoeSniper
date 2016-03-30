@@ -1,69 +1,56 @@
 ﻿using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using Newtonsoft.Json;
 
 namespace PoeSniper
 {
     public class NamesManager
     {
-        private const string _properyNamesFile = @"data/propertyNames.json";
         private const string _modNamesFile = @"data/modNames.json";
+        private const string _weaponTypesFile = @"data/weaponTypes.json";
 
-        private bool _newPropertyNames;
         private bool _newModNames;
 
-        public List<string> PropertyNames { get; set; }
         public List<string> ModNames { get; set; }
+        public List<string> WeaponTypes { get; set; }
 
-        public void LoadNames()
+        public void Initialize()
         {
-            var propertyNamesJson = File.ReadAllText(_properyNamesFile);
-            PropertyNames = JsonConvert.DeserializeObject<List<string>>(propertyNamesJson);
-            if (PropertyNames == null)
-            {
-                PropertyNames = new List<string>();
-            }
-
             var modNamesJson = File.ReadAllText(_modNamesFile);
             ModNames = JsonConvert.DeserializeObject<List<string>>(modNamesJson);
             if (ModNames == null)
             {
                 ModNames = new List<string>();
             }
+
+            var weaponTypesJson = File.ReadAllText(_weaponTypesFile);
+            WeaponTypes = JsonConvert.DeserializeObject<List<string>>(weaponTypesJson);
+            if (WeaponTypes == null)
+            {
+                WeaponTypes = new List<string>();
+            }
         }
 
-        public void SaveNames()
+        public void SaveModNames()
         {
-            if (_newPropertyNames)
-            {
-                var propertyNamesJson = JsonConvert.SerializeObject(PropertyNames, Formatting.Indented);
-                File.WriteAllText(_properyNamesFile, propertyNamesJson);
-
-                _newPropertyNames = false;
-            }
-
             if (_newModNames)
             {
-                var modNamesJson = JsonConvert.SerializeObject(ModNames);
+                var modNamesJson = JsonConvert.SerializeObject(ModNames, Formatting.Indented);
                 File.WriteAllText(_modNamesFile, modNamesJson);
 
                 _newModNames = false;
             }
         }
 
-        public void AddNewPropertyNames(IEnumerable<JsonProperty> jsonProperties)
+        public void VerifyWeaponType(string weaponType)
         {
-            if (jsonProperties == null)
+            if (!WeaponTypes.Contains(weaponType))
             {
-                return;
-            }
+                Logger.Warning("Found new weapon type: " + weaponType);
+                WeaponTypes.Add(weaponType);
 
-            var newPropertyNames = jsonProperties.Select(p => p.name).Where(p => !PropertyNames.Contains(p));
-            if (newPropertyNames.Any())
-            {
-                PropertyNames.AddRange(newPropertyNames);
-                _newPropertyNames = true;
+                var weaponTypesJson = JsonConvert.SerializeObject(WeaponTypes, Formatting.Indented);
+                File.WriteAllText(_weaponTypesFile, weaponTypesJson);
             }
         }
     }

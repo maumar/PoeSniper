@@ -17,7 +17,7 @@ namespace PoeSniper
         {
             var settings = GetSettings();
             var _namesManager = new NamesManager();
-            _namesManager.LoadNames();
+            _namesManager.Initialize();
 
             _itemProcessor = new ItemProcessor(settings.leagues, _namesManager);
 
@@ -68,7 +68,7 @@ namespace PoeSniper
         {
             var apiUrl = "http://www.pathofexile.com/api/public-stash-tabs/" + chunkId;
 
-            Console.WriteLine(DateTime.Now + " Fetching " +
+            Logger.Information(DateTime.Now + " Fetching " +
                 (string.IsNullOrEmpty(chunkId)
                     ? "first chunk"
                     : "chunk with ID: " + chunkId) + " ");

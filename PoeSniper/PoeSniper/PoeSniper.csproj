@@ -47,6 +47,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ConsoleManager.cs" />
     <Compile Include="Indexer.cs" />
     <Compile Include="ItemProcessor.cs" />
     <Compile Include="JsonClasses.cs" />
@@ -60,10 +61,10 @@
     <None Include="data\modNames.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="packages.config" />
-    <None Include="data\propertyNames.json">
+    <None Include="data\weaponTypes.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="packages.config" />
     <None Include="settings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
