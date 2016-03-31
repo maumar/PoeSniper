@@ -1,15 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Diagnostics;
 using System.Linq;
+using System.Text.RegularExpressions;
+using System.Threading;
 using Model;
 
 namespace PoeSniper
 {
     public class ItemProcessor
     {
-        private List<string> _leagues;
+        private Logger _logger;
+        private Settings _settings;
         private NamesManager _namesManager;
+        private PropertyProcessor _propertyProcessor;
+        private ArmorProcessor _armorProcessor;
+        private WeaponProcessor _weaponProcessor;
+
 
         private readonly string[] _armourProperties = new[] 
         {
@@ -18,35 +25,60 @@ namespace PoeSniper
             "Energy Shield"
         };
 
-        public ItemProcessor(List<string> leagues, NamesManager namesManager)
+        private readonly Regex _damageRangeRegex = new Regex(@"(?<damageRange>\d+-\d+)", RegexOptions.Compiled);
+        private readonly Regex _genericPropertyRegex = new Regex(@"(?<value>" + Regex.Escape("+") + @"?-?\d+" + Regex.Escape(".") + @"?\d*)", RegexOptions.Compiled);
+
+
+        public ItemProcessor(Settings settings, NamesManager namesManager, Logger logger)
         {
-            _leagues = leagues;
+            _settings = settings;
             _namesManager = namesManager;
+            _logger = logger;
+            _propertyProcessor = new PropertyProcessor(_logger);
+            _armorProcessor = new ArmorProcessor(_propertyProcessor);
+            _weaponProcessor = new WeaponProcessor(_propertyProcessor, _namesManager, _logger);
         }
 
         public List<Item> ProcessItems(JsonStashes jsonStashes)
         {
             var items = new List<Item>();
-            foreach (var jsonStash in jsonStashes.stashes)
+            if (jsonStashes.stashes != null && jsonStashes.stashes.Count > 0)
             {
-                var league = jsonStash.items.FirstOrDefault()?.league;
-                if (!_leagues.Contains(league))
-                {
-                    continue;
-                }
+                _logger.Information(DateTime.Now + " Processing", newLine: false);
 
-                foreach (var jsonItem in jsonStash.items)
+                var sw = new Stopwatch();
+                sw.Start();
+
+                foreach (var jsonStash in jsonStashes.stashes)
                 {
-                    var item = ProcessItem(jsonItem);
-                    if (item != null)
+                    var league = jsonStash.items.FirstOrDefault()?.league;
+                    if (!_settings.leagues.Contains(league))
                     {
-                        items.Add(item);
+                        continue;
+                    }
+
+                    foreach (var jsonItem in jsonStash.items)
+                    {
+                        var item = ProcessItem(jsonItem);
+                        if (item != null)
+                        {
+                            items.Add(item);
+                        }
                     }
                 }
+
+                _namesManager.SaveModNames();
+
+                _logger.Information(" Items: " + items.Count, newLine: false);
+                _logger.Information(" | Done in " + sw.Elapsed);
             }
 
-            _namesManager.SaveModNames();
-
+            if (items.Count < _settings.sleepTreshold)
+            {
+                _logger.Information("Indexing too fast. Sleeping for " + _settings.sleepTime + " seconds.");
+                Thread.Sleep(_settings.sleepTime * 1000);
+            }
+        
             return items;
         }
 
@@ -54,25 +86,41 @@ namespace PoeSniper
         {
             var item = ProcessGenericItemProperties(jsonItem);
 
+            var isMap = jsonItem.properties != null && jsonItem.properties.Any(p => p.name == "Map Tier");
             var isGem = jsonItem.Name == "" && jsonItem.properties != null && jsonItem.properties.Any(p => p.name == "Level");
             var isArmor = jsonItem.properties != null && jsonItem.properties.Any(p => _armourProperties.Contains(p.name));
             var isWeapon = jsonItem.properties != null && jsonItem.properties.Any(p => p.name == "Attacks per Second");
-            if (isGem)
+
+            if (!isGem && !isMap)
+            {
+                ProcessMods(item, jsonItem.implicitMods);
+                ProcessMods(item, jsonItem.explicitMods);
+            }
+
+            if (!isGem)
+            {
+                ProcessItemRarity(item, jsonItem);
+            }
+            else
+            {
+                item.Rarity = Rarity.Normal;
+            }
+
+            if (isMap)
+            {
+                item = ProcessMap(item, jsonItem);
+            }
+            else if (isGem)
             {
                 item = ProcessGem(item, jsonItem);
             }
             else if (isArmor)
             {
-                item = ProcessArmor(item, jsonItem);
+                item = _armorProcessor.ProcessArmor(item, jsonItem);
             }
             else if (isWeapon)
             {
-                item = ProcessWeapon(item, jsonItem);
-            }
-
-            if (!isGem)
-            {
-                ProcessMods(item, jsonItem);
+                item = _weaponProcessor.ProcessWeapon(item, jsonItem);
             }
 
             return item;
@@ -81,7 +129,7 @@ namespace PoeSniper
         private Item ProcessGenericItemProperties(JsonItem jsonItem)
         {
             var name = ExtractItemName(jsonItem);
-            var quality = ExtractIntegerProperty(jsonItem, "Quality");
+            var quality = _propertyProcessor.ExtractIntegerProperty(jsonItem, "Quality");
 
             var item = new Item();
             item.Id = jsonItem.id;
@@ -92,6 +140,39 @@ namespace PoeSniper
             item.Quality = quality;
 
             return item;
+        }
+
+        private Item ProcessItemRarity(Item item, JsonItem jsonItem)
+        {
+            if (jsonItem.flavourText != null && jsonItem.flavourText.Count > 0)
+            {
+                item.Rarity = Rarity.Unique;
+            }
+            else if (jsonItem.explicitMods != null && jsonItem.explicitMods.Count > 2)
+            {
+                item.Rarity = Rarity.Rare;
+            }
+            else
+            {
+                item.Rarity = jsonItem.explicitMods != null && jsonItem.explicitMods.Count > 0
+                    ? Rarity.Magic
+                    : Rarity.Normal;
+            }
+
+            return item;
+        }
+
+        private Item ProcessMap(Item map, JsonItem jsonItem)
+        {
+            var mapTier = _propertyProcessor.ExtractIntegerProperty(jsonItem, "Map Tier");
+            var itemQuantity = _propertyProcessor.ExtractIntegerProperty(jsonItem, "Item Quantity");
+            var itemRarity = _propertyProcessor.ExtractIntegerProperty(jsonItem, "Item Rarity");
+           
+            map.MapTier = mapTier;
+            map.ItemQuantity = itemQuantity;
+            map.ItemRarity = itemRarity;
+
+            return map;
         }
 
         private Item ProcessGem(Item gem, JsonItem jsonItem)
@@ -105,97 +186,77 @@ namespace PoeSniper
 
                 if (!int.TryParse(levelProperty.Replace("(Max)", ""), out level))
                 {
-                    Logger.Error("Couldn't parse gem level: '" + levelProperty + "'");
+                    _logger.Error("Couldn't parse gem level: '" + levelProperty + "'");
                 }
             }
 
             gem.Level = level;
             gem.IsMaxLevel = isMaxLevel;
+            gem.Rarity = Rarity.Normal;
 
             return gem;
         }
 
-        private Item ProcessArmor(Item armor, JsonItem jsonItem)
+        private void ProcessMods(Item item, List<string> jsonItem)
         {
-            var armour = ExtractIntegerProperty(jsonItem, "Armour");
-            var evasion = ExtractIntegerProperty(jsonItem, "Evasion");
-            var energyShield = ExtractIntegerProperty(jsonItem, "Energy Shield");
-            var chanceToBlock = ExtractIntegerProperty(jsonItem, "Chance to Block");
-
-            armor.Armour = armour;
-            armor.EvasionRating = evasion;
-            armor.EnergyShield = energyShield;
-            armor.ChanceToBlock = chanceToBlock;
-
-            return armor;
-        }
-
-
-        private void ProcessMods(Item item, JsonItem jsonItem)
-        {
-            foreach (var jsonExplicitMod in jsonItem.explicitMods)
+            item.ExplicitMods = new List<ItemMod>();
+            if (jsonItem != null)
             {
-
-            }
-        }
-
-
-        private Item ProcessWeapon(Item weapon, JsonItem jsonItem)
-        {
-            var weaponType = (string)jsonItem.properties.FirstOrDefault().name;
-            if (string.IsNullOrEmpty(weaponType))
-            {
-                Logger.Error("Weapon type not found. Item name: " + weapon.Name);
-            }
-
-            _namesManager.VerifyWeaponType(weaponType);
-
-            var attacksPerSecond = ExtractDecimalProperty(jsonItem, "Attacks per Second");
-            var physicalDamage = ExtractRangeProperty(jsonItem, "Physical Damage");
-            var chaosDamage = ExtractRangeProperty(jsonItem, "Chaos Damage");
-            var criticalStrikeChance = ExtractDecimalProperty(jsonItem, "Critical Strike Chance");
-
-            weapon.WeaponType = weaponType;
-            weapon.AttacksPerSecond = attacksPerSecond;
-            weapon.PhysicalDamage = physicalDamage;
-            weapon.ChaosDamage = chaosDamage;
-            weapon.CriticalStrikeChance = criticalStrikeChance;
-
-            ProcessElementalDamage(weapon, jsonItem);
-
-            return weapon;
-        }
-
-        private Item ProcessElementalDamage(Item weapon, JsonItem jsonItem)
-        {
-            var elementalDamageProperty = jsonItem.properties.Where(p => p.name == "Elemental Damage").FirstOrDefault();
-            if (elementalDamageProperty != null)
-            {
-                foreach (var value in elementalDamageProperty.values)
+                foreach (var jsonExplicitMod in jsonItem)
                 {
-                    var damageValue = ExtractRangePropertyValue((string)value[0], "Elemental Damage");
-                    switch((long)value[1])
+                    if (_namesManager.ModNames.Contains(jsonExplicitMod))
                     {
-                        case 4:
-                            weapon.FireDamage = damageValue;
-                            break;
+                        item.ExplicitMods.Add(new ItemMod { Name = jsonExplicitMod, Value = null });
+                    }
+                    else
+                    {
+                        string modName;
+                        decimal? modValue;
 
-                        case 5:
-                            weapon.ColdDamage = damageValue;
-                            break;
+                        ProcessMod(jsonExplicitMod, out modName, out modValue);
+                        _namesManager.AddModName(modName);
 
-                        case 6:
-                            weapon.LightningDamage = damageValue;
-                            break;
-
-                        default:
-                            Logger.Error("Invalid Elemental Damage type: " + value[1]);
-                            break;
+                        if (modName != null)
+                        {
+                            item.ExplicitMods.Add(new ItemMod { Name = modName, Value = modValue });
+                        }
                     }
                 }
             }
+        }
 
-            return weapon;
+        private void ProcessMod(string modString, out string modName, out decimal? modValue)
+        {
+            if (modString.StartsWith("<"))
+            {
+                modName = null;
+                modValue = null;
+
+                return;
+            }
+
+            var match = _damageRangeRegex.Match(modString);
+            if (match.Success)
+            {
+                modName = modString.Replace(match.Value, "X");
+                var range = match.Value.Split(new[] { "-" }, StringSplitOptions.RemoveEmptyEntries);
+                modValue = (decimal.Parse(range[0]) + decimal.Parse(range[1])) / 2.0M;
+            }
+            else
+            {
+                match = _genericPropertyRegex.Match(modString);
+                if (match.Success)
+                {
+                    var index = modString.IndexOf(match.Value);
+                    modName = modString.Remove(index, match.Value.Length).Insert(index, "X");
+                    modValue = decimal.Parse(match.Value);
+                }
+                else
+                {
+                    modName = modString;
+                    modValue = null;
+                }
+            }
         }
 
         private string ExtractItemName(JsonItem jsonItem)
@@ -204,80 +265,6 @@ namespace PoeSniper
             var name = jsonItem.Name.Substring(nameStartIndex + 1);
 
             return string.IsNullOrEmpty(name) ? jsonItem.typeLine : name + " " + jsonItem.typeLine;
-        }
-
-        private int ExtractIntegerProperty(JsonItem jsonItem, string propertyName, int defaultValue = 0)
-        {
-            var propertyValue = defaultValue;
-            if (jsonItem.properties != null)
-            {
-                var propertyString = (string)jsonItem.properties.Where(p => p.name == propertyName).FirstOrDefault()?.values?[0]?[0];
-                if (propertyString != null)
-                {
-                    if (!int.TryParse(propertyString.Replace("%", ""), out propertyValue))
-                    {
-                        Logger.Error("Couldn't parse property. Name: '" + propertyName + "' Value: '" + propertyString + "'");
-                    }
-                }
-            }
-
-            return propertyValue;
-        }
-
-        private decimal ExtractDecimalProperty(JsonItem jsonItem, string propertyName, decimal defaultValue = 0.0M)
-        {
-            var propertyValue = defaultValue;
-            if (jsonItem.properties != null)
-            {
-                var propertyString = (string)jsonItem.properties.Where(p => p.name == propertyName).FirstOrDefault()?.values?[0]?[0];
-                if (propertyString != null)
-                {
-                    if (!decimal.TryParse(propertyString.Replace("%", ""), out propertyValue))
-                    {
-                        Logger.Error("Couldn't parse property. Name: '" + propertyName + "' Value: '" + propertyString + "'");
-                    }
-                }
-            }
-
-            return propertyValue;
-        }
-
-        private decimal ExtractRangeProperty(JsonItem jsonItem, string propertyName, decimal defaultValue = 0.0M)
-        {
-            var propertyValue = defaultValue;
-            if (jsonItem.properties != null)
-            {
-                var propertyString = (string)jsonItem.properties.Where(p => p.name == propertyName).FirstOrDefault()?.values?[0]?[0];
-                if (propertyString != null)
-                {
-                    propertyValue = ExtractRangePropertyValue(propertyString, propertyName);
-                }
-            }
-
-            return propertyValue;
-        }
-
-        private decimal ExtractRangePropertyValue(string propertyString, string propertyName)
-        {
-            var rangeValues = propertyString.Split(new[] { "-" }, StringSplitOptions.RemoveEmptyEntries);
-            if (rangeValues.Count() != 2)
-            {
-                Logger.Error("Couldn't parse range property. Name: '" + propertyName + "' Value: '" + propertyString + "'");
-            }
-
-            int minValue;
-            if (!int.TryParse(rangeValues[0], out minValue))
-            {
-                Logger.Error("Couldn't parse min value of a range property. Name: '" + propertyName + "' Value: '" + rangeValues[0] + "'");
-            }
-
-            int maxValue;
-            if (!int.TryParse(rangeValues[1], out maxValue))
-            {
-                Logger.Error("Couldn't parse max value of a range property. Name: '" + propertyName + "' Value: '" + rangeValues[1] + "'");
-            }
-
-            return (maxValue + minValue) / 2.0M;
         }
     }
 }

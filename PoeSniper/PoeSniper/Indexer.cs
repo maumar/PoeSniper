@@ -1,25 +1,32 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 
 namespace PoeSniper
 {
     public class Indexer
     {
+        private const string _itemApiUrl = @"http://www.pathofexile.com/api/public-stash-tabs/";
+        private const string _exileToolsUrl = @"http://api.exiletools.com/stats/_search";
+
+        private Logger _logger;
         private ItemProcessor _itemProcessor;
         private NamesManager _namesManager;
 
         public void Start(string chunkId = null)
         {
             var settings = GetSettings();
-            var _namesManager = new NamesManager();
+            _logger = new Logger(LogLevel.Information);
+
+            var _namesManager = new NamesManager(_logger);
             _namesManager.Initialize();
 
-            _itemProcessor = new ItemProcessor(settings.leagues, _namesManager);
+            _itemProcessor = new ItemProcessor(settings, _namesManager, _logger);
 
             if (string.IsNullOrEmpty(chunkId))
             {
@@ -52,7 +59,24 @@ namespace PoeSniper
 
         private string GetLatestChunkId()
         {
-            return null;
+            var payload = @"{ ""query"": { ""match"": { ""_type"": ""run"" } },""sort"": [ { ""runTime"": { ""order"": ""desc"" }}], size:1 }";
+            using (var client = new WebClient())
+            {
+                client.Headers[HttpRequestHeader.ContentType] = "application/x-www-form-urlencoded";
+                var response = client.UploadString(_exileToolsUrl, "POST", payload);
+
+                var changeIdRegex = new Regex(@"\""change_id\"":\""(?<value>[\d-]+)\""", RegexOptions.Compiled);
+                var match = changeIdRegex.Match(response);
+                if (match.Success)
+                {
+                    return match.Groups["value"].Value;
+                }
+                else
+                {
+                    _logger.Error("Couldn't fetch change ID from ExileTools");
+                    return null;
+                }
+            }
         }
 
         private string Index(string chunkId)
@@ -66,20 +90,17 @@ namespace PoeSniper
 
         private JsonStashes GetJsonStashes(string chunkId)
         {
-            var apiUrl = "http://www.pathofexile.com/api/public-stash-tabs/" + chunkId;
+            _logger.Information(DateTime.Now + " Fetching " + chunkId, newLine: false);
 
-            Logger.Information(DateTime.Now + " Fetching " +
-                (string.IsNullOrEmpty(chunkId)
-                    ? "first chunk"
-                    : "chunk with ID: " + chunkId) + " ");
-
+            var sw = new Stopwatch();
+            sw.Start();
             var handler = new HttpClientHandler()
             {
                 AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
             };
 
             var httpClient = new HttpClient(handler);
-            var getStreamTask = httpClient.GetStreamAsync(apiUrl);
+            var getStreamTask = httpClient.GetStreamAsync(_itemApiUrl + chunkId);
             getStreamTask.Wait();
             var stream = getStreamTask.Result;
 
@@ -90,6 +111,8 @@ namespace PoeSniper
             }
 
             var rootObject = JsonConvert.DeserializeObject<JsonStashes>(value);
+
+            _logger.Information(" | Done in " + sw.Elapsed);
 
             return rootObject;
         }

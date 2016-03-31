@@ -1,8 +1,17 @@
 {
+  "startingId_comment": "This should not be needed - ID will be fetched automatically from ExileTools.com",
+  "startingId": "",
+  
+  "sleepTreshold_comment": "If there are less items than this number, Indexer will go to sleep to avoid unnecessary network traffic (default: 1000)",
+  "sleepTreshold": 1000,
+
+  "sleepTime_comment":  "How long (in seconds) should the Index sleep in case there are too few items to process (default: 10)",
+  "sleepTime": 10,
+  
+  "leagues_comment":  "Which leagues should be indexed, all other leagues will be ignored",
   "leagues": 
   [
     "Perandus",
     "Hardcore Perandus"
-  ],
-  "startingId": "3262431-3432090-3196209-3764723-3554393"
+  ]
 }
