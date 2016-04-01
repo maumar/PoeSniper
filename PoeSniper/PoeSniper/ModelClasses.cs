@@ -1,15 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace Model
+namespace PoeSniper
 {
-    public enum Rarity
-    {
-        Normal,
-        Magic,
-        Rare,
-        Unique,
-    }
-
     public class Item
     {
         public string Id { get; set; }
@@ -28,7 +24,7 @@ namespace Model
         public StashTab StashTab { get; set; }
 
         //public Currency? PriceCurrency { get; set; }
-        public decimal? PriceAmount { get; set; }
+        public ItemPrice Price { get; set; }
 
         // map properties
         public int MapTier { get; set; }
@@ -68,5 +64,58 @@ namespace Model
     {
         public string Name { get; set; }
         public decimal? Value { get; set; }
+    }
+
+    public class StashTab
+    {
+        public string AccountName { get; set; }
+        public string CharacterName { get; set; }
+        public string TabName { get; set; }
+    }
+
+    public class ItemPrice
+    {
+        public Currency? Currency { get; set; }
+        public decimal? Value { get; set; }
+        public PriceType? Type { get; set; }
+        public string PriceString { get; set; }
+    }
+
+    public enum Rarity
+    {
+        Normal,
+        Magic,
+        Rare,
+        Unique,
+    }
+
+    public enum Currency
+    {
+        Alchemy,
+        Alteration,
+        Blessed,
+        Chance,
+        Chaos,
+        Chisel,
+        Chromatic,
+        Divine,
+        Exalted,
+        Fusing,
+        GCP,
+        Jeweller,
+        Mirror,
+        Scour,
+        Regret,
+        Regal,
+        Transmutation,
+        Vaal,
+    }
+
+    public enum PriceType
+    {
+        Unknown = 0,
+        Buyout = 1,
+        FixedPrice = 2,
+        CurrentOffer = 3,
     }
 }

@@ -20,7 +20,7 @@ namespace PoeSniper
 
         public void Information(string message, bool newLine = true)
         {
-            if (_logLevel >= LogLevel.Information)
+            if (_logLevel <= LogLevel.Information)
             {
                 LogInternal(message, ConsoleColor.DarkGray, "", newLine);
             }
@@ -28,7 +28,7 @@ namespace PoeSniper
 
         public void Warning(string message, bool newLine = true)
         {
-            if (_logLevel >= LogLevel.Warning)
+            if (_logLevel <= LogLevel.Warning)
             {
                 LogInternal(message, ConsoleColor.Yellow, "WARNING - ", newLine);
             }
@@ -36,7 +36,7 @@ namespace PoeSniper
 
         public void Error(string message, bool newLine = true)
         {
-            if (_logLevel >= LogLevel.Warning)
+            if (_logLevel <= LogLevel.Warning)
             {
                 LogInternal(message, ConsoleColor.Red, "ERROR - ", newLine);
             }

@@ -52,7 +52,9 @@
     <Compile Include="Indexer.cs" />
     <Compile Include="ItemProcessor.cs" />
     <Compile Include="JsonClasses.cs" />
+    <Compile Include="ModelClasses.cs" />
     <Compile Include="NamesManager.cs" />
+    <Compile Include="PriceProcessor.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PropertyProcessor.cs" />
@@ -71,12 +73,6 @@
     <None Include="settings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Model\Model.csproj">
-      <Project>{82876ea0-f010-4719-8837-b58bfbad6ae3}</Project>
-      <Name>Model</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

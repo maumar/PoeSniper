@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
-using Model;
 
 namespace PoeSniper
 {
@@ -14,6 +13,7 @@ namespace PoeSniper
         private Settings _settings;
         private NamesManager _namesManager;
         private PropertyProcessor _propertyProcessor;
+        private PriceProcessor _priceProcessor;
         private ArmorProcessor _armorProcessor;
         private WeaponProcessor _weaponProcessor;
 
@@ -28,13 +28,13 @@ namespace PoeSniper
         private readonly Regex _damageRangeRegex = new Regex(@"(?<damageRange>\d+-\d+)", RegexOptions.Compiled);
         private readonly Regex _genericPropertyRegex = new Regex(@"(?<value>" + Regex.Escape("+") + @"?-?\d+" + Regex.Escape(".") + @"?\d*)", RegexOptions.Compiled);
 
-
         public ItemProcessor(Settings settings, NamesManager namesManager, Logger logger)
         {
             _settings = settings;
             _namesManager = namesManager;
             _logger = logger;
             _propertyProcessor = new PropertyProcessor(_logger);
+            _priceProcessor = new PriceProcessor();
             _armorProcessor = new ArmorProcessor(_propertyProcessor);
             _weaponProcessor = new WeaponProcessor(_propertyProcessor, _namesManager, _logger);
         }
@@ -57,12 +57,36 @@ namespace PoeSniper
                         continue;
                     }
 
+                    var stashTab = new StashTab
+                    {
+                        AccountName = jsonStash.accountName,
+                        CharacterName = jsonStash.lastCharacterName,
+                        TabName = jsonStash.stash
+                    };
+
                     foreach (var jsonItem in jsonStash.items)
                     {
                         var item = ProcessItem(jsonItem);
                         if (item != null)
                         {
+                            var price = _priceProcessor.ProcessPrice(jsonItem.note);
+                            if (price != null)
+                            {
+                                item.Price = price;
+                            }
+                            else
+                            {
+                                price = _priceProcessor.ProcessPrice(jsonStash.stash);
+                                if (price == null)
+                                {
+                                    price = new ItemPrice();
+                                }
+
+                                price.PriceString = string.Join(" | ", new[] { jsonItem.note, jsonStash.stash }.Where(p => !string.IsNullOrEmpty(p)));
+                            }
+
                             items.Add(item);
+                            item.StashTab = stashTab;
                         }
                     }
                 }
@@ -86,12 +110,13 @@ namespace PoeSniper
         {
             var item = ProcessGenericItemProperties(jsonItem);
 
+            var isStackable = jsonItem.properties != null && jsonItem.properties.Any(p => p.name == "Stack Size");
             var isMap = jsonItem.properties != null && jsonItem.properties.Any(p => p.name == "Map Tier");
             var isGem = jsonItem.Name == "" && jsonItem.properties != null && jsonItem.properties.Any(p => p.name == "Level");
             var isArmor = jsonItem.properties != null && jsonItem.properties.Any(p => _armourProperties.Contains(p.name));
             var isWeapon = jsonItem.properties != null && jsonItem.properties.Any(p => p.name == "Attacks per Second");
 
-            if (!isGem && !isMap)
+            if (!isGem && !isMap && !isStackable)
             {
                 ProcessMods(item, jsonItem.implicitMods);
                 ProcessMods(item, jsonItem.explicitMods);

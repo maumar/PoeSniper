@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using Newtonsoft.Json;
 
 namespace PoeSniper
@@ -23,7 +24,7 @@ namespace PoeSniper
             var settings = GetSettings();
             _logger = new Logger(LogLevel.Information);
 
-            var _namesManager = new NamesManager(_logger);
+            _namesManager = new NamesManager(_logger);
             _namesManager.Initialize();
 
             _itemProcessor = new ItemProcessor(settings, _namesManager, _logger);
@@ -90,31 +91,45 @@ namespace PoeSniper
 
         private JsonStashes GetJsonStashes(string chunkId)
         {
-            _logger.Information(DateTime.Now + " Fetching " + chunkId, newLine: false);
-
-            var sw = new Stopwatch();
-            sw.Start();
-            var handler = new HttpClientHandler()
+            JsonStashes jsonStashes = null;
+            while (jsonStashes == null)
             {
-                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-            };
+                _logger.Information(DateTime.Now + " Fetching " + chunkId, newLine: false);
 
-            var httpClient = new HttpClient(handler);
-            var getStreamTask = httpClient.GetStreamAsync(_itemApiUrl + chunkId);
-            getStreamTask.Wait();
-            var stream = getStreamTask.Result;
+                var sw = new Stopwatch();
+                sw.Start();
+                var handler = new HttpClientHandler()
+                {
+                    AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+                };
 
-            string value = string.Empty;
-            using (var reader = new StreamReader(stream, Encoding.UTF8))
-            {
-                value = reader.ReadToEnd();
+                var httpClient = new HttpClient(handler);
+
+                try
+                {
+                    var getStreamTask = httpClient.GetStreamAsync(_itemApiUrl + chunkId);
+                    getStreamTask.Wait();
+                    var stream = getStreamTask.Result;
+
+                    string value = string.Empty;
+                    using (var reader = new StreamReader(stream, Encoding.UTF8))
+                    {
+                        value = reader.ReadToEnd();
+                    }
+
+                    jsonStashes = JsonConvert.DeserializeObject<JsonStashes>(value);
+                    _logger.Information(" | Done in " + sw.Elapsed);
+                }
+                catch (Exception ex)
+                {
+                    _logger.Warning("");
+                    _logger.Warning("Couldn't connect to GGG server. Sleeping for 60 seconds");
+                    _logger.Warning(ex.Message);
+                    Thread.Sleep(60000);
+                }
             }
 
-            var rootObject = JsonConvert.DeserializeObject<JsonStashes>(value);
-
-            _logger.Information(" | Done in " + sw.Elapsed);
-
-            return rootObject;
+            return jsonStashes;
         }
     }
 }
