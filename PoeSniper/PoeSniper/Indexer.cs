@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
@@ -16,8 +17,9 @@ namespace PoeSniper
         private const string _exileToolsUrl = @"http://api.exiletools.com/stats/_search";
 
         private Logger _logger;
-        private ItemProcessor _itemProcessor;
         private NamesManager _namesManager;
+        private ItemProcessor _itemProcessor;
+        private SearchManager _searchManager;
 
         public void Start(string chunkId = null)
         {
@@ -27,7 +29,10 @@ namespace PoeSniper
             _namesManager = new NamesManager(_logger);
             _namesManager.Initialize();
 
-            _itemProcessor = new ItemProcessor(settings, _namesManager, _logger);
+            var priceProcessor = new PriceProcessor(_logger);
+            _itemProcessor = new ItemProcessor(settings, _namesManager, _logger, priceProcessor);
+            _searchManager = new SearchManager(_logger, priceProcessor);
+            _searchManager.UpdateSearches();
 
             if (string.IsNullOrEmpty(chunkId))
             {
@@ -44,9 +49,17 @@ namespace PoeSniper
                 throw new InvalidOperationException("Couldn't find starting ID. Please specify it in settings.json");
             }
 
+            int i = 0;
             while(true)
             {
-                chunkId = Index(chunkId);
+                if (i == 10)
+                {
+                    _searchManager.UpdateSearches();
+                    i = 0;
+                }
+
+                var items = Index(ref chunkId);
+                _searchManager.Search(items);
             }
         }
 
@@ -80,13 +93,14 @@ namespace PoeSniper
             }
         }
 
-        private string Index(string chunkId)
+        private List<Item> Index(ref string chunkId)
         {
             var jsonStashes = GetJsonStashes(chunkId);
 
-            _itemProcessor.ProcessItems(jsonStashes);
+            var items = _itemProcessor.ProcessItems(jsonStashes);
+            chunkId = jsonStashes.next_change_id;
 
-            return jsonStashes.next_change_id;
+            return items;
         }
 
         private JsonStashes GetJsonStashes(string chunkId)
@@ -104,6 +118,7 @@ namespace PoeSniper
                 };
 
                 var httpClient = new HttpClient(handler);
+                httpClient.Timeout = new TimeSpan(0, 0, 0, 0, 30000);
 
                 try
                 {
@@ -123,9 +138,9 @@ namespace PoeSniper
                 catch (Exception ex)
                 {
                     _logger.Warning("");
-                    _logger.Warning("Couldn't connect to GGG server. Sleeping for 60 seconds");
+                    _logger.Warning("Couldn't connect to GGG server. Sleeping for 30 seconds");
                     _logger.Warning(ex.Message);
-                    Thread.Sleep(60000);
+                    Thread.Sleep(30000);
                 }
             }
 

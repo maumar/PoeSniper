@@ -1,0 +1,26 @@
+{
+  "comment1": "Currency exchange rates can be modified here. All rares are in relation to Chaos Orb",
+  "comment2": "Rates are chaos/currency e.g. chisel could be reprsented as '1/3', exalted as '50/1'",
+  "comment3": "DON'T change anything except the ratio numbers",
+
+  "exchangeRates": 
+  {
+    "Alchemy": "1/2",
+    "Alteration": "1/16",
+    "Blessed": "1/1",
+    "Chisel": "1/3",
+    "Chance": "1/8",
+    "Chromatic": "1/16",
+    "Divine": "8/1",
+    "Exalted": "50/1",
+    "Fusing": "1/2",
+    "GCP": "3/2",
+    "Jeweller": "1/8",
+    "Mirror": "2000/1",
+    "Regal": "3/2",
+    "Regret": "1/1",
+    "Scour": "1/2",
+    "Transmutation": "1/40",
+    "Vaal": "1/1"
+  }
+}

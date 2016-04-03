@@ -1,0 +1,26 @@
+{
+  "searchDescription": "SAMPLE - Coil 115/75",
+  "itemName": "Lightning Coil",
+  "league": "Hardcore Perandus",
+  "itemBase": "",
+  "itemRarity": "unique",
+  "corrupted": "false",
+
+  "socketsAndLinks": "5s",
+  "socketColors": "RRRRBB",
+
+  "maxPrice": "5",
+  "maxPriceCurrency": "exalted",
+
+  "explicitMods": 
+  [
+    {
+      "modName": "X to maximum Life",
+      "modValue": "75"
+    },
+    {
+      "modName": "X% increased Armour and Evasion",
+      "modValue": "115"
+    }
+  ]
+}

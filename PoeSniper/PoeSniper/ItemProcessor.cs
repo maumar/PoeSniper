@@ -28,13 +28,13 @@ namespace PoeSniper
         private readonly Regex _damageRangeRegex = new Regex(@"(?<damageRange>\d+-\d+)", RegexOptions.Compiled);
         private readonly Regex _genericPropertyRegex = new Regex(@"(?<value>" + Regex.Escape("+") + @"?-?\d+" + Regex.Escape(".") + @"?\d*)", RegexOptions.Compiled);
 
-        public ItemProcessor(Settings settings, NamesManager namesManager, Logger logger)
+        public ItemProcessor(Settings settings, NamesManager namesManager, Logger logger, PriceProcessor priceProcessor)
         {
             _settings = settings;
             _namesManager = namesManager;
             _logger = logger;
             _propertyProcessor = new PropertyProcessor(_logger);
-            _priceProcessor = new PriceProcessor();
+            _priceProcessor = priceProcessor;
             _armorProcessor = new ArmorProcessor(_propertyProcessor);
             _weaponProcessor = new WeaponProcessor(_propertyProcessor, _namesManager, _logger);
         }
@@ -69,20 +69,10 @@ namespace PoeSniper
                         var item = ProcessItem(jsonItem);
                         if (item != null)
                         {
-                            var price = _priceProcessor.ProcessPrice(jsonItem.note);
-                            if (price != null)
+                            item.Price = _priceProcessor.ProcessPrice(jsonItem.note);
+                            if (item.Price == null)
                             {
-                                item.Price = price;
-                            }
-                            else
-                            {
-                                price = _priceProcessor.ProcessPrice(jsonStash.stash);
-                                if (price == null)
-                                {
-                                    price = new ItemPrice();
-                                }
-
-                                price.PriceString = string.Join(" | ", new[] { jsonItem.note, jsonStash.stash }.Where(p => !string.IsNullOrEmpty(p)));
+                                item.Price = _priceProcessor.ProcessPrice(jsonStash.stash);
                             }
 
                             items.Add(item);
@@ -163,6 +153,7 @@ namespace PoeSniper
             item.IsIdentified = jsonItem.identified;
             item.IsCorrupted = jsonItem.corrupted;
             item.Quality = quality;
+            item.Note = jsonItem.note;
 
             return item;
         }

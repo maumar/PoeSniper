@@ -16,15 +16,14 @@ namespace PoeSniper
         public bool IsIdentified { get; set; }
         public bool IsCorrupted { get; set; }
         public int Quality { get; set; }
+        public string Note { get; set; }
 
         public List<ItemMod> ImplicitMods { get; set; }
         public List<ItemMod> ExplicitMods { get; set; }
         //public List<GemSocket> Sockets { get; set; }
 
-        public StashTab StashTab { get; set; }
-
-        //public Currency? PriceCurrency { get; set; }
         public ItemPrice Price { get; set; }
+        public StashTab StashTab { get; set; }
 
         // map properties
         public int MapTier { get; set; }
@@ -75,10 +74,9 @@ namespace PoeSniper
 
     public class ItemPrice
     {
-        public Currency? Currency { get; set; }
-        public decimal? Value { get; set; }
-        public PriceType? Type { get; set; }
-        public string PriceString { get; set; }
+        public Currency Currency { get; set; }
+        public decimal Value { get; set; }
+        public PriceType Type { get; set; }
     }
 
     public enum Rarity

@@ -42,9 +42,9 @@ namespace PoeSniper
             }
         }
 
-        public void MatchFound(string message, bool newLine = true)
+        public void ItemFound(string message, bool newLine = true)
         {
-            LogInternal(message, ConsoleColor.Green, "MATCH FOUND - ", newLine);
+            LogInternal(message, ConsoleColor.Green, "", newLine);
         }
 
         private static void LogInternal(string message, ConsoleColor color, string messageTypePrefix, bool newLine)
@@ -53,11 +53,11 @@ namespace PoeSniper
             Console.ForegroundColor = color;
             if (newLine)
             {
-                Console.WriteLine(messageTypePrefix + message);
+                Console.WriteLine(message != "" ? messageTypePrefix + message : "");
             }
             else
             {
-                Console.Write(messageTypePrefix + message);
+                Console.Write(message != "" ? messageTypePrefix + message : "");
             }
 
             Console.ForegroundColor = oldColor;

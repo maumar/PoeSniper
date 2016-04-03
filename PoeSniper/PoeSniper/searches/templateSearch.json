@@ -1,0 +1,209 @@
+{
+  "instructions1": "In order to setup an item search, create a new file in the 'searches' folder and copy contents of this 'templateSearch.json' file into that newly created file",
+  "instructions2": "Then in that new file, fill in the fields that you want to search for",
+
+  "instructions3": "DO NOT delete this 'templateSearch.json' file!",
+
+  "instructions4": "All values you enter need to be in quotes, just like those instructions are",
+  "instructions5": "Numeric values can be with or without quotes, they can be integer or decimals, for decimals use '.' for decimal point like so: 1.5",
+  "instructions6": "Boolean values can be either 'true' or 'false'",
+
+  "instructions7": "You can delete all the fields that are not needed, as well as all the '_comment' lines - so that the file is more readable",
+  "instructions8": "You can also remove all 'instructions' and 'section' lines",
+
+  "searchDescription_comment": "Description of the item you are looking for - it's not used in search algorithm but rather it's for your convenience, e.g. 'Coil 115/75'",
+  "searchDescription": "",
+
+  "itemName_comment": "Item name",
+  "itemName": "",
+
+  "league_comment": "League, e.g. 'Standard', 'Hardcore Perandus'",
+  "league": "",
+
+  "itemBase_comment": "Item base",
+  "itemBase": "",
+
+  "section1": "**************************************************************** GENERIC PROPERTIES ****************************************************************",
+
+  "itemRarity_comment": "Item rarity - (normal/magic/rare/unique)",
+  "itemRarity": "",
+
+  "identified_comment": "Whether item is identified or not (true/false)",
+  "identified": "",
+
+  "corrupted_comment": "Whether item is corrupted or not (true/false)",
+  "corrupted": "",
+
+  "socketsAndLinks_comment1": "String representing number of sockets and links in the following format:",
+  "socketsAndLinks_comment2": "xSyL where x is number of sockets and y is number of linked sockets, e.g. '6S5L' is 5-link with 6 sockets",
+  "socketsAndLinks_comment3": "you can also just provide number of sockets, or just number of links e.g. '4L' or '6S'",
+  "socketsAndLinks": "",
+
+  "socketColors_comment": "String representing socket colors R represents red, G - green, B - blue, e.g. RRGGB is 2 red, 2 gree and 1 blue",
+  "socketColors": "",
+
+  "quality_comment": "Minimum item quality (integer)",
+  "quality": "",
+
+  "note_comment": "What should be on the note that people can attach to the item",
+  "note": "",
+
+  "buyoutOnly_comment": "Whether only priced item should be matched (true/false)",
+  "buyoutOnly": "",
+  
+  "maxPrice_comment": "Maximum price, just the number (integer/decimal)",
+  "maxPrice": "",
+
+  "maxPriceCurrency_comment": "Maximum price, just the currency - recognized currency names are listed in 'data/currencyNames.json'",
+  "maxPriceCurrency": "",
+
+  "section2": "**************************************************************** MAP PROPERTIES ****************************************************************",
+  "section2_comment": "Remove this entire section if you are not looking for map",
+
+  "minMapTier_comment": "Minimum map Tier (1-15)",
+  "minMapTier": "",
+
+  "maxMapTier_comment": "Maximum map Tier (1-15)",
+  "maxMapTier": "",
+
+  "mapItemQuantity_comment": "Minimum map item quantity (integer)",
+  "mapItemQuantity": "",
+
+  "mapItemRarity_comment": "Minimum map item quantity (integer)",
+  "mapItemRarity": "",
+
+  "section3": "**************************************************************** GEM PROPERTIES ****************************************************************",
+  "section3_comment": "Remove this entire section if you are not looking for gem",
+
+  "gemMinGemLevel_comment": "Minimum gem level (integer)",
+  "gemMinGemLevel": "",
+
+  "gemIsMaxLevel_comment1": "Wheter gem can be levelled up more (true/false)",
+  "gemIsMaxLevel_comment2": "E.g. gemMinGemLevel: 19, gemIsMaxLevel: true means corrupted gem that can't be levelled to 20",
+  "gemIsMaxLevel": "",
+
+  "section4": "**************************************************************** ARMOUR PROPERTIES ****************************************************************",
+  "section4_comment": "Remove this entire section if you are not looking for armour/shield",
+
+  "armourMinArmour_comment": "Minimum Armour value given maximum item quality (integer)",
+  "armourMinArmour": "",
+
+  "armourMaxArmour_comment": "Maximum Armour value given maximum item quality (integer)",
+  "armourMaxArmour": "",
+
+  "armourMinEvasion_comment": "Minimum Evasion value given maximum item quality (integer)",
+  "armourMinEvasion": "",
+
+  "armourMaxEvasion_comment": "Maximum Evasion value given maximum item quality (integer)",
+  "armourMaxEvasion": "",
+
+  "armourMinEnergyShield_comment": "Minimum Energy Shield value given maximum item quality (integer)",
+  "armourMinEnergyShield": "",
+
+  "armourMaxEnergyShield_comment": "Maximum Energy Shield value given maximum item quality (integer)",
+  "armourMaxEnergyShield": "",
+
+  "armourMinChanceToBlock_comment": "Minimum Chance to Block value (integer)",
+  "armourMinChanceToBlock": "",
+
+  "armourMaxChanceToBlock_comment": "Maximum Chance to Block value (integer)",
+  "armourMaxChanceToBlock": "",
+
+  "section5": "**************************************************************** WEAPON PROPERTIES ****************************************************************",
+  "section5_comment": "Remove this entire section if you are not looking for weapon",
+
+  "weaponType_comment": "Weapon type - supported weapon types are listed in 'data/weaponTypes.json'",
+  "weaponType": "",
+
+  "weaponMinDps_comment": "Minimum weapon total DPS given maxiumum item quality (integer/decimal)",
+  "weaponMinDps": "",
+
+  "weaponMaxDps_comment": "Maximum weapon total DPS given maxiumum item quality (integer/decimal)",
+  "weaponMaxDps": "",
+
+  "weaponMinPhysicalDps_comment": "Minimum weapon physical DPS given maxiumum item quality (integer/decimal)",
+  "weaponMinPhysicalDps": "",
+
+  "weaponMaxPhysicalDps_comment": "Maximum weapon physical DPS given maxiumum item quality (integer/decimal)",
+  "weaponMaxPhysicalDps": "",
+
+  "weaponMinElementalDps_comment": "Minimum weapon elemental DPS (integer/decimal)",
+  "weaponMinElementalDps": "",
+
+  "weaponMaxElementalDps_comment": "Maximum weapon elemental DPS (integer/decimal)",
+  "weaponMaxElementalDps": "",
+
+  "weaponMinCriticalStrikeChance_comment": "Minimum weapon critical strike chance (integer/decimal)",
+  "weaponMinCriticalStrikeChance": "",
+
+  "weaponMaxCriticalStrikeChance_comment": "Maximum weapon critical strike chance (integer/decimal)",
+  "weaponMaxCriticalStrikeChance": "",
+
+  "weaponMinAttacksPerSecond_comment": "Minimum weapon attacks per second (integer/decimal)",
+  "weaponMinAttacksPerSecondDps": "",
+
+  "weaponMaxAttacksPerSecondDps_comment": "Maximum weapon attacks per second (integer/decimal)",
+  "weaponMaxAttacksPerSecondDps": "",
+
+  "section6": "**************************************************************** IMPLICIT MODS ****************************************************************",
+
+  "implicitMods_comments1": "Place to specify implicit mods",
+  "implicitMods_comments2": "List of supported mods names can be found in 'data/modNames.json'",
+  "implicitMods_comments3": "You must copy the mod name from that file EXACTLY as it's listed",
+  "implicitMods_comments4": "When removing empty mod slots, make sure that the last modName-modValue pair DOES NOT have comma after it",
+
+  "implicitMods": 
+  [
+    {
+      "modName": "",
+      "modValue": ""
+    },
+    {
+      "modName": "",
+      "modValue": ""
+    }
+  ],
+
+  "section7": "**************************************************************** EXPLICIT MODS ****************************************************************",
+
+  "explicitMods_comments1": "Place to specify implicit mods",
+  "explicitMods_comments2": "List of supported mods names can be found in 'data/modNames.json'",
+  "explicitMods_comments3": "You must copy the mod name from that file EXACTLY as it's listed",
+  "explicitMods_comments4": "When removing empty mod slots, make sure that the last { modName - modValue } pair DOES NOT have comma after it",
+
+  "explicitMods": 
+  [
+    {
+      "modName": "",
+      "modValue": ""
+    },
+    {
+      "modName": "",
+      "modValue": ""
+    },
+    {
+      "modName": "",
+      "modValue": ""
+    },
+    {
+      "modName": "",
+      "modValue": ""
+    },
+    {
+      "modName": "",
+      "modValue": ""
+    },
+    {
+      "modName": "",
+      "modValue": ""
+    },
+    {
+      "modName": "",
+      "modValue": ""
+    },
+    {
+      "modName": "",
+      "modValue": ""
+    }
+  ]
+}

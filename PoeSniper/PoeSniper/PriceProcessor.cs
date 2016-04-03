@@ -1,12 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json;
 
 namespace PoeSniper
 {
     public class PriceProcessor
     {
+        private const string _currencyExchangeRatesFileName = @"data/currencyExchangeRates.json";
+
         private readonly Dictionary<string, Currency> _currencyNameMap = new Dictionary<string, Currency>
         {
             { "alch", Currency.Alchemy },
@@ -34,11 +38,39 @@ namespace PoeSniper
         };
 
         private Regex _priceRegex;
+        private Logger _logger;
 
-        public PriceProcessor()
+        private Dictionary<Currency, decimal> _currencyExchangeRates;
+        public PriceProcessor(Logger logger)
         {
+            _logger = logger;
             var currencyTypePattern = string.Join("|", _currencyNameMap.Keys);
             _priceRegex = new Regex(@"(?<priceType>~(price|b/o|c/o))\s*(?<value>[\d./]+)\s*(?<currencyType>" + currencyTypePattern + ")", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+            LoadCurrencyExchangeRates();
+        }
+
+        private void LoadCurrencyExchangeRates()
+        {
+            _currencyExchangeRates = new Dictionary<Currency, decimal>();
+
+            var currencyExchangeRatesString = File.ReadAllText(_currencyExchangeRatesFileName);
+            var currencyExchangeRatesJson = JsonConvert.DeserializeObject<JsonExchangeRates>(currencyExchangeRatesString);
+
+            foreach (var currencyExchangeRate in currencyExchangeRatesJson.exchangeRates)
+            {
+                var exchangeDecimal = ParseDecimalOrFraction(currencyExchangeRate.Value);
+                if (exchangeDecimal != null)
+                {
+                    _currencyExchangeRates.Add(currencyExchangeRate.Key, exchangeDecimal.Value);
+                }
+                else
+                {
+                    _logger.Error("Invalid currency exchange rate for " + currencyExchangeRate.Key + " Exchange string: ')" + currencyExchangeRate.Value + "'");
+                }
+            }
+
+            _currencyExchangeRates.Add(Currency.Chaos, 1);
         }
 
         public ItemPrice ProcessPrice(string priceString)
@@ -48,29 +80,36 @@ namespace PoeSniper
                 return null;
             }
 
-            var itemPrice = new ItemPrice
-            {
-                PriceString = priceString
-            };
-
             var priceMatch = _priceRegex.Match(priceString);
             if (priceMatch.Success)
             {
-                Currency currency;
-                if (_currencyNameMap.TryGetValue(priceMatch.Groups["currencyType"].Value.ToLower(), out currency))
+                var priceType = ParsePriceType(priceMatch.Groups["priceType"].Value);
+                var value = ParseDecimalOrFraction(priceMatch.Groups["value"].Value);
+                var currencyType = ParseCurrencyType(priceMatch.Groups["currencyType"].Value.ToLower());
+                if (priceType != null && value != null && currencyType != null)
                 {
-                    itemPrice.Currency = currency;
+                    return new ItemPrice { Type = priceType.Value, Value = value.Value, Currency = currencyType.Value };
                 }
-                else
-                {
-                    itemPrice.Currency = null;
-                }
-
-                itemPrice.Type = ParsePriceType(priceMatch.Groups["priceType"].Value);
-                itemPrice.Value = ParsePriceValue(priceMatch.Groups["value"].Value);
             }
 
-            return itemPrice;
+            return null;
+        }
+
+        public decimal? CalculateExchangeRate(decimal fromAmount, Currency fromCurrency, Currency toCurrency = Currency.Chaos)
+        {
+            decimal fromRatio;
+            if (!_currencyExchangeRates.TryGetValue(fromCurrency, out fromRatio))
+            {
+                return null;
+            }
+
+            decimal toRatio;
+            if (!_currencyExchangeRates.TryGetValue(toCurrency, out toRatio))
+            {
+                return null;
+            }
+
+            return Math.Round(fromAmount * fromRatio / toRatio, 2);
         }
 
         private PriceType? ParsePriceType(string priceTypeMatch)
@@ -91,15 +130,15 @@ namespace PoeSniper
             return null;
         }
 
-        private decimal? ParsePriceValue(string priceValueMatch)
+        private decimal? ParseDecimalOrFraction(string decimalOrFractionString)
         {
             decimal value = 0.0M;
-            if (decimal.TryParse(priceValueMatch, out value))
+            if (decimal.TryParse(decimalOrFractionString, out value))
             {
                 return value;
             }
 
-            var fraction = priceValueMatch.Split(new[] { "/" }, StringSplitOptions.RemoveEmptyEntries);
+            var fraction = decimalOrFractionString.Split(new[] { "/" }, StringSplitOptions.RemoveEmptyEntries);
             if (fraction.Count() == 2)
             {
                 decimal numerator;
@@ -111,6 +150,19 @@ namespace PoeSniper
             }
 
             return null;
+        }
+
+        private Currency? ParseCurrencyType(string currencyTypeMatch)
+        {
+            Currency currency;
+            if (_currencyNameMap.TryGetValue(currencyTypeMatch, out currency))
+            {
+                return currency;
+            }
+            else
+            {
+                return null;
+            }
         }
     }
 }
